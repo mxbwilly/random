@@ -98,11 +98,11 @@ Each phase ends with something you can click through on a preview deployment.
 2. ✅ **Auth** — signup with school-domain check, verification email, login/logout, password reset, terms acceptance, admin role via env var. Seed a first school.
 3. ✅ **Catalog + browsing** — teachers, courses, search with fuzzy matching, teacher and course pages (empty states).
 4. ✅ **Uploads** — upload wizard, direct-to-storage upload, exam page with PDF preview and signed download, votes.
-5. **Community** — request board, replies, comments on exams/teachers, in-app notifications, email notifications via Resend.
-6. **Moderation** — report flow, admin queue, catalog merge, takedown page, audit log.
+5. ✅ **Community** — request board, replies, comments on exams/teachers, in-app notifications, email notifications via Resend.
+6. ✅ **Moderation** — report flow, admin queue, catalog merge, takedown page, audit log.
 7. **Polish + launch** — mobile pass, empty/loading states, Playwright flows, analytics (privacy-friendly, e.g. Plausible), error tracking (Sentry).
 
-Rough effort: phases 1–2 first, then 3–4 as the core, 5–6 after. Every phase is a PR against `main`.
+Phases 1–6 are built. Phase 7 (polish, Playwright suite in CI, analytics, error tracking) is next, followed by the first real deployment.
 
 ## 7. Resolved questions
 

@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { findOrCreateCourse, findOrCreateTeacher } from "@/lib/catalog/search";
 import { storage, type UploadTarget } from "@/lib/storage";
 import { rateLimit } from "@/lib/rate-limit";
+import { fulfillRequest } from "@/lib/requests/actions";
 import { ALLOWED_TYPES, CURRENT_YEAR, MAX_EXAM_FILES, MAX_SOLUTION_FILES, MIN_YEAR, extensionFor } from "./files";
 
 const fileMeta = z.object({
@@ -125,7 +126,7 @@ export async function createExamDraft(input: DraftInput): Promise<DraftResult> {
  * storage and publish the exam. Missing files are dropped; an exam with no
  * exam file left is deleted.
  */
-export async function finalizeExam(examId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function finalizeExam(examId: string, requestId?: string): Promise<{ ok: true } | { ok: false; error: string }> {
   const user = await requireUser();
   const exam = await db.exam.findFirst({ where: { id: examId, uploaderId: user.id, status: "HIDDEN" }, include: { files: true } });
   if (!exam) return { ok: false, error: "Upload not found." };
@@ -149,6 +150,7 @@ export async function finalizeExam(examId: string): Promise<{ ok: true } | { ok:
   });
   revalidatePath(`/teachers/${exam.teacherId}`);
   revalidatePath(`/courses/${exam.courseId}`);
+  if (requestId) await fulfillRequest(requestId, examId, user.id);
   return { ok: true };
 }
 

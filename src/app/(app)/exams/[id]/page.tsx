@@ -8,6 +8,7 @@ import { db } from "@/lib/db";
 import { kindLabel, termLabel } from "@/lib/normalize";
 import { VoteButtons } from "./vote-buttons";
 import { DeleteExamButton } from "./delete-button";
+import { Comments } from "@/components/comments/comments";
 
 export default async function ExamPage({ params }: PageProps<"/exams/[id]">) {
   const user = await requireUser();
@@ -78,6 +79,8 @@ export default async function ExamPage({ params }: PageProps<"/exams/[id]">) {
           {solutionFiles.length > 0 && <FileGroup title="Solutions" icon={<KeyRound className="size-4" />} files={solutionFiles} />}
         </aside>
       </div>
+
+      {exam.status === "LIVE" && <Comments target={{ examId: exam.id }} currentUserId={user.id} isAdmin={isAdmin} />}
     </div>
   );
 }

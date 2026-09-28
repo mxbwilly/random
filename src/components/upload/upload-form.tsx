@@ -26,10 +26,12 @@ export function UploadForm({
   initialCourse,
   initialTeacher,
   maxMb,
+  requestId,
 }: {
   initialCourse: { id: string; label: string } | null;
   initialTeacher: { id: string; label: string } | null;
   maxMb: number;
+  requestId: string | null;
 }) {
   const router = useRouter();
   const [course, setCourse] = useState<PickerValue>(initialCourse);
@@ -99,7 +101,7 @@ export function UploadForm({
     }
 
     setProgress("Publishing…");
-    const done = await finalizeExam(draft.examId);
+    const done = await finalizeExam(draft.examId, requestId ?? undefined);
     setProgress(null);
     if (!done.ok) return setError(done.error);
     toast.success("Exam uploaded. Thank you!");

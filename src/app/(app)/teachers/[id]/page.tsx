@@ -5,6 +5,7 @@ import { ExamGroups } from "@/components/exams/exam-groups";
 import { requireUser } from "@/lib/auth/guards";
 import { db } from "@/lib/db";
 import { groupExams } from "@/lib/exams/group";
+import { Comments } from "@/components/comments/comments";
 
 export default async function TeacherPage({ params }: PageProps<"/teachers/[id]">) {
   const user = await requireUser();
@@ -46,6 +47,7 @@ export default async function TeacherPage({ params }: PageProps<"/teachers/[id]"
         </div>
       </div>
       <ExamGroups groups={groups} hrefPrefix="/courses" />
+      <Comments target={{ teacherId: teacher.id }} currentUserId={user.id} isAdmin={user.role === "ADMIN"} />
     </div>
   );
 }
