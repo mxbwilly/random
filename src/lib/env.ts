@@ -15,7 +15,6 @@ export const env = {
   supabaseUrl: optional("SUPABASE_URL"),
   supabaseServiceRoleKey: optional("SUPABASE_SERVICE_ROLE_KEY"),
   supabaseBucket: optional("SUPABASE_STORAGE_BUCKET", "exams"),
-  localStorageDir: optional("LOCAL_STORAGE_DIR", "./storage"),
   maxUploadBytes: Number(optional("MAX_UPLOAD_MB", "25")) * 1024 * 1024,
   isProduction: process.env.NODE_ENV === "production",
 };
