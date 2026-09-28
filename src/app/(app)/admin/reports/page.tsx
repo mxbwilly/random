@@ -60,7 +60,7 @@ export default async function AdminReportsPage() {
 
       <section className="grid gap-3">
         <h2 className="font-semibold">Hidden exams</h2>
-        {hidden.length === 0 && <p className="text-sm text-muted-foreground">None.</p>}
+        {hidden.length === 0 ? <p className="text-sm text-muted-foreground">None.</p> : (
         <ul className="divide-y rounded-md border">
           {hidden.map((e) => (
             <li key={e.id} className="flex items-center gap-3 px-4 py-2 text-sm">
@@ -69,6 +69,7 @@ export default async function AdminReportsPage() {
             </li>
           ))}
         </ul>
+        )}
       </section>
     </div>
   );

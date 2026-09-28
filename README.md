@@ -30,7 +30,18 @@ Demo accounts after seeding (school domain `demo.edu`):
 
 Without a `RESEND_API_KEY`, verification and reset emails are **printed to the terminal** running `npm run dev`, so you can sign up with any `@demo.edu` (or `@anything.demo.edu`) address locally.
 
-Useful scripts: `npm run typecheck`, `npm run lint`, `npm test`, `npm run db:studio` (Prisma Studio GUI).
+If port 5432 is already taken (a Postgres you installed earlier, for example), set `DB_PORT=5433` in `.env` and change the port in `DATABASE_URL` to match before `docker compose up -d`.
+
+Useful scripts: `npm run typecheck`, `npm run lint`, `npm test` (unit), `npm run e2e` (browser tests, see below), `npm run db:studio` (Prisma Studio GUI).
+
+## Browser tests
+
+`npm run e2e` builds the app, starts it on port 3100 with a test mailbox enabled, and runs the Playwright suite in `e2e/` against your local database (which must be migrated and seeded). CI runs the same suite on every pull request. `npm run e2e:ui` opens Playwright's interactive runner. First time only: `npx playwright install chromium`.
+
+## Optional services
+
+- **Sentry** (error tracking): set `SENTRY_DSN` and `NEXT_PUBLIC_SENTRY_DSN`. Nothing is initialised without them.
+- **Plausible** (privacy-friendly analytics): set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` to your site's domain.
 
 ## Project layout
 
@@ -45,6 +56,7 @@ src/lib/auth/             sessions, password hashing, verification codes, school
 src/lib/email/            email sending (Resend, or console in dev)
 src/components/ui/        shadcn/ui components
 src/proxy.ts              redirects logged-out visitors away from app routes
+e2e/                      Playwright browser tests (npm run e2e)
 ```
 
 ## Setting up hosting (first time)

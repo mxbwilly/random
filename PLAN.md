@@ -100,9 +100,9 @@ Each phase ends with something you can click through on a preview deployment.
 4. ✅ **Uploads** — upload wizard, direct-to-storage upload, exam page with PDF preview and signed download, votes.
 5. ✅ **Community** — request board, replies, comments on exams/teachers, in-app notifications, email notifications via Resend.
 6. ✅ **Moderation** — report flow, admin queue, catalog merge, takedown page, audit log.
-7. **Polish + launch** — mobile pass, empty/loading states, Playwright flows, analytics (privacy-friendly, e.g. Plausible), error tracking (Sentry).
+7. ✅ **Polish + launch** — mobile pass, empty/loading states, Playwright flows, analytics (privacy-friendly, e.g. Plausible), error tracking (Sentry).
 
-Phases 1–6 are built. Phase 7 (polish, Playwright suite in CI, analytics, error tracking) is next, followed by the first real deployment.
+Phases 1–7 are built. Next: first real deployment (Supabase + Resend + Vercel), then adding a real school.
 
 ## 7. Resolved questions
 

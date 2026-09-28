@@ -40,3 +40,5 @@ yarn-debug.log*
 yarn-error.log*
 src/generated/
 /storage/
+test-results/
+playwright-report/

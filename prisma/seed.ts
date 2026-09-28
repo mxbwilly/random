@@ -95,6 +95,18 @@ async function main() {
       }));
   }
 
+  // A second school with one student, used to verify school isolation.
+  const other = await db.school.upsert({
+    where: { slug: "other-college" },
+    update: {},
+    create: { name: "Other College", slug: "other-college", emailDomains: ["other.edu"] },
+  });
+  await db.user.upsert({
+    where: { email: "pat@other.edu" },
+    update: { passwordHash: password },
+    create: { email: "pat@other.edu", passwordHash: password, displayName: "Pat Other", schoolId: other.id, emailVerifiedAt: new Date(), acceptedTermsAt: new Date() },
+  });
+
   // Sample exam metadata (no files) so browsing pages have something to show.
   const examCount = await db.exam.count({ where: { schoolId: school.id } });
   if (examCount === 0) {

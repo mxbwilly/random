@@ -5,10 +5,24 @@ import { env } from "@/lib/env";
 type Mail = { to: string; subject: string; text: string; html?: string };
 
 /**
+ * In-memory copy of sent mail for browser tests. Only filled when DEV_MAILBOX=1;
+ * never set that in a real deployment. Kept on globalThis because Next bundles
+ * server actions and route handlers separately, so a module-level array would
+ * be duplicated.
+ */
+const g = globalThis as unknown as { __devMailbox?: (Mail & { at: number })[] };
+export const devMailbox: (Mail & { at: number })[] = (g.__devMailbox ??= []);
+const useDevMailbox = process.env.DEV_MAILBOX === "1";
+
+/**
  * Sends email through Resend when RESEND_API_KEY is set, otherwise prints it
  * to the server console so local development needs no email account.
  */
 export async function sendEmail(mail: Mail) {
+  if (useDevMailbox) {
+    devMailbox.push({ ...mail, at: Date.now() });
+    if (devMailbox.length > 200) devMailbox.shift();
+  }
   if (!env.resendApiKey) {
     console.log(`\n[email] To: ${mail.to}\n[email] Subject: ${mail.subject}\n${mail.text}\n`);
     return { ok: true, dev: true } as const;
