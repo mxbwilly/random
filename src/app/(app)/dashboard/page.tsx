@@ -28,7 +28,7 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <CardTitle>Get started</CardTitle>
-          <CardDescription>Browsing, uploading and requests arrive in the next build phases.</CardDescription>
+          <CardDescription>Find a teacher or course, share an exam you have, or ask classmates for one.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button asChild variant="outline"><Link href="/search">Search teachers and courses</Link></Button>
