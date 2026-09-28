@@ -1,0 +1,366 @@
+// BackExams data model. Every content table carries schoolId so that
+// school isolation is a single `where` clause (and can later become RLS).
+
+generator client {
+  provider        = "prisma-client"
+  previewFeatures = ["postgresqlExtensions"]
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [pg_trgm]
+}
+
+// ---------- Schools & users ----------
+
+model School {
+  id           String   @id @default(cuid())
+  name         String
+  slug         String   @unique
+  emailDomains String[] // e.g. ["demo.edu", "students.demo.edu"]
+  createdAt    DateTime @default(now())
+
+  users       User[]
+  departments Department[]
+  courses     Course[]
+  teachers    Teacher[]
+  exams       Exam[]
+  requests    ExamRequest[]
+  comments    Comment[]
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+model User {
+  id              String    @id @default(cuid())
+  schoolId        String
+  school          School    @relation(fields: [schoolId], references: [id])
+  email           String    @unique
+  passwordHash    String
+  displayName     String
+  major           String?
+  gradYear        Int?
+  role            Role      @default(STUDENT)
+  emailVerifiedAt DateTime?
+  acceptedTermsAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  sessions          Session[]
+  verificationCodes VerificationCode[]
+  uploadedExams     Exam[]             @relation("uploader")
+  requests          ExamRequest[]
+  requestReplies    RequestReply[]
+  comments          Comment[]
+  reports           Report[]           @relation("reporter")
+  resolvedReports   Report[]           @relation("resolver")
+  notifications     Notification[]
+  votes             Vote[]
+  createdCourses    Course[]
+  createdTeachers   Teacher[]
+  auditLogs         AuditLog[]
+
+  @@index([schoolId])
+}
+
+model Session {
+  id        String   @id // sha256 of the cookie token
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userAgent String?
+  ip        String?
+
+  @@index([userId])
+}
+
+enum CodePurpose {
+  SIGNUP
+  RESET
+}
+
+model VerificationCode {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  purpose   CodePurpose
+  expiresAt DateTime
+  attempts  Int         @default(0)
+  usedAt    DateTime?
+  createdAt DateTime    @default(now())
+
+  @@index([userId, purpose])
+}
+
+// ---------- Catalog ----------
+
+model Department {
+  id       String  @id @default(cuid())
+  schoolId String
+  school   School  @relation(fields: [schoolId], references: [id])
+  name     String
+  code     String // "CS", "MATH"
+
+  courses  Course[]
+  teachers Teacher[]
+
+  @@unique([schoolId, code])
+}
+
+model Course {
+  id             String      @id @default(cuid())
+  schoolId       String
+  school         School      @relation(fields: [schoolId], references: [id])
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id])
+  code           String // "CS 101"
+  normalizedCode String // "cs101" for dedupe
+  title          String
+  createdById    String?
+  createdBy      User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime    @default(now())
+
+  exams    Exam[]
+  requests ExamRequest[]
+
+  @@unique([schoolId, normalizedCode])
+  @@index([schoolId])
+}
+
+model Teacher {
+  id             String      @id @default(cuid())
+  schoolId       String
+  school         School      @relation(fields: [schoolId], references: [id])
+  departmentId   String?
+  department     Department? @relation(fields: [departmentId], references: [id])
+  displayName    String // "Jane Smith"
+  normalizedName String // "jane smith" for dedupe
+  createdById    String?
+  createdBy      User?       @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt      DateTime    @default(now())
+
+  exams    Exam[]
+  requests ExamRequest[]
+  comments Comment[]
+
+  @@index([schoolId])
+  @@index([schoolId, normalizedName])
+}
+
+// ---------- Exams ----------
+
+enum Term {
+  FALL
+  SPRING
+  SUMMER
+  WINTER
+}
+
+enum ExamKind {
+  MIDTERM
+  FINAL
+  QUIZ
+  PRACTICE
+  OTHER
+}
+
+enum ExamStatus {
+  LIVE
+  HIDDEN
+  REMOVED
+}
+
+model Exam {
+  id            String     @id @default(cuid())
+  schoolId      String
+  school        School     @relation(fields: [schoolId], references: [id])
+  courseId      String
+  course        Course     @relation(fields: [courseId], references: [id])
+  teacherId     String
+  teacher       Teacher    @relation(fields: [teacherId], references: [id])
+  uploaderId    String?
+  uploader      User?      @relation("uploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  anonymous     Boolean    @default(true) // hide uploader from other students
+  year          Int
+  term          Term
+  kind          ExamKind
+  title         String?
+  notes         String?
+  hasSolutions  Boolean    @default(false)
+  status        ExamStatus @default(LIVE)
+  downloadCount Int        @default(0)
+  attestedAt    DateTime // uploader accepted the sharing attestation
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  files              ExamFile[]
+  comments           Comment[]
+  reports            Report[]
+  votes              Vote[]
+  fulfilledRequests  ExamRequest[]
+
+  @@index([schoolId, teacherId, year])
+  @@index([schoolId, courseId, year])
+  @@index([uploaderId])
+}
+
+enum FileKind {
+  EXAM
+  SOLUTIONS
+}
+
+model ExamFile {
+  id           String   @id @default(cuid())
+  examId       String
+  exam         Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  kind         FileKind @default(EXAM)
+  storagePath  String   @unique
+  originalName String
+  mimeType     String
+  sizeBytes    Int
+  createdAt    DateTime @default(now())
+}
+
+model Vote {
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  examId String
+  exam   Exam   @relation(fields: [examId], references: [id], onDelete: Cascade)
+  value  Int // +1 or -1
+
+  @@id([userId, examId])
+}
+
+// ---------- Community ----------
+
+enum RequestStatus {
+  OPEN
+  FULFILLED
+  CLOSED
+}
+
+model ExamRequest {
+  id               String        @id @default(cuid())
+  schoolId         String
+  school           School        @relation(fields: [schoolId], references: [id])
+  requesterId      String
+  requester        User          @relation(fields: [requesterId], references: [id], onDelete: Cascade)
+  courseId         String?
+  course           Course?       @relation(fields: [courseId], references: [id])
+  teacherId        String?
+  teacher          Teacher?      @relation(fields: [teacherId], references: [id])
+  year             Int?
+  term             Term?
+  kind             ExamKind?
+  message          String
+  status           RequestStatus @default(OPEN)
+  fulfilledByExamId String?
+  fulfilledByExam  Exam?         @relation(fields: [fulfilledByExamId], references: [id], onDelete: SetNull)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  replies RequestReply[]
+
+  @@index([schoolId, status, createdAt])
+}
+
+model RequestReply {
+  id        String      @id @default(cuid())
+  requestId String
+  request   ExamRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime    @default(now())
+
+  @@index([requestId])
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  schoolId  String
+  school    School    @relation(fields: [schoolId], references: [id])
+  authorId  String
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  examId    String?
+  exam      Exam?     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  teacherId String?
+  teacher   Teacher?  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Comment?  @relation("thread", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[] @relation("thread")
+  body      String
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  reports Report[]
+
+  @@index([examId])
+  @@index([teacherId])
+}
+
+// ---------- Moderation & notifications ----------
+
+enum ReportReason {
+  COPYRIGHT
+  WRONG_INFO
+  INAPPROPRIATE
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  DISMISSED
+}
+
+model Report {
+  id           String       @id @default(cuid())
+  examId       String?
+  exam         Exam?        @relation(fields: [examId], references: [id], onDelete: Cascade)
+  commentId    String?
+  comment      Comment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reporterId   String?
+  reporter     User?        @relation("reporter", fields: [reporterId], references: [id], onDelete: SetNull)
+  reason       ReportReason
+  details      String?
+  status       ReportStatus @default(OPEN)
+  resolvedById String?
+  resolvedBy   User?        @relation("resolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt   DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@index([status, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // e.g. "request.reply", "comment.reply", "request.fulfilled"
+  payload   Json
+  readAt    DateTime?
+  emailedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String // "exam.hide", "teacher.merge", ...
+  targetType String
+  targetId  String
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([targetType, targetId])
+}

@@ -23,9 +23,9 @@ Decisions below were agreed in conversation. Anything marked *Open* still needs 
 
 - **Next.js 15, App Router, Server Actions** for forms (upload, comment, request). Server Components for pages, so most data fetching is on the server with no client API layer to maintain.
 - **Prisma** for schema, migrations and typed queries against Supabase Postgres.
-- **Auth: Auth.js (NextAuth v5)** with the Credentials provider + Prisma adapter. We own the password hashing (argon2 via `@node-rs/argon2`) and the verification-code flow. Adding "Sign in with Google" later is a config change, not a rewrite.
+- **Auth: own session implementation** (random token in an httpOnly cookie, SHA-256 of it stored in a `Session` table, 30-day sliding expiry) with argon2id password hashing via `@node-rs/argon2` and a hashed 6-digit verification-code flow. Chosen over Auth.js because its Credentials provider fights database sessions; Google/Microsoft sign-in can be added later as a second way to create a `Session`.
 - **Email: Resend** (free tier 3k emails/month) with **React Email** templates. Used for verification codes, password reset, and notifications. Locally, emails print to the console.
-- **Files: Supabase Storage**, private bucket. Browser uploads directly to Storage via a short-lived signed upload URL (keeps big files off Vercel's 4.5 MB request limit). Downloads use signed URLs that expire in a few minutes and are only issued to a logged-in user from the exam's school.
+- **Files: Supabase Storage**, private bucket, behind a small storage interface with a local-disk implementation for development. Browser uploads directly to Storage via a short-lived signed upload URL (keeps big files off Vercel's 4.5 MB request limit). Downloads use signed URLs that expire in a few minutes and are only issued to a logged-in user from the exam's school.
 - **Validation: Zod** on every server action. **Rate limiting** on login/signup/upload via Upstash Redis (free tier) or a simple DB-backed counter to start.
 - **Search:** Postgres `pg_trgm` extension for fuzzy teacher/course matching and duplicate warnings. No separate search service.
 - **Testing:** Vitest for unit/logic, Playwright for a few end-to-end flows (signup → verify → upload → browse). GitHub Actions runs typecheck, lint, tests on every PR.
@@ -94,8 +94,8 @@ Every content table carries `schoolId` so school isolation is one `where` clause
 
 Each phase ends with something you can click through on a preview deployment.
 
-1. **Foundation** — repo setup, Next.js + Tailwind + shadcn, Prisma schema + migrations, Docker Postgres, CI, deploy pipeline to Vercel, Supabase project wiring.
-2. **Auth** — signup with school-domain check, verification email, login/logout, password reset, terms acceptance, admin role via env var. Seed a first school.
+1. ✅ **Foundation** — repo setup, Next.js + Tailwind + shadcn, Prisma schema + migrations, Docker Postgres, CI, deploy pipeline to Vercel, Supabase project wiring.
+2. ✅ **Auth** — signup with school-domain check, verification email, login/logout, password reset, terms acceptance, admin role via env var. Seed a first school.
 3. **Catalog + browsing** — teachers, courses, search with fuzzy matching, teacher and course pages (empty states).
 4. **Uploads** — upload wizard, direct-to-storage upload, exam page with PDF preview and signed download, votes.
 5. **Community** — request board, replies, comments on exams/teachers, in-app notifications, email notifications via Resend.
@@ -104,11 +104,11 @@ Each phase ends with something you can click through on a preview deployment.
 
 Rough effort: phases 1–2 first, then 3–4 as the core, 5–6 after. Every phase is a PR against `main`.
 
-## 7. Open questions
+## 7. Resolved questions
 
-- *Open:* App name and domain? (Used in emails, page titles and the storage bucket name.)
-- *Open:* Which school seeds first? I need its email domain(s) and a handful of departments to seed for realistic demo data.
-- *Open:* Should uploaders be able to stay anonymous to other students (shown as "a student") while admins still see who uploaded? Recommendation: yes, default anonymous.
-- *Open:* Allow solutions/answer keys as a separate file on an exam? (Higher legal sensitivity; some schools treat these differently.) Recommendation: allow, clearly labelled, same report flow.
-- *Open:* Term naming: Fall/Spring/Summer/Winter covers US semesters and quarters. Do you need anything else (trimesters, "Term 1/2")?
-- *Open:* Do you have Vercel/Supabase/Resend accounts already, or should the first phase include a step-by-step setup doc?
+- App name: **BackExams** as a working name, set in one place (`APP_NAME`). Domain still undecided.
+- First school: a fictional **Demo University** (`demo.edu`) is seeded so demo data never carries a real school's branding. Real schools are added as rows in `School`.
+- Uploaders are **anonymous to other students by default**; admins can see the uploader for moderation.
+- Solutions/answer keys are **allowed**, stored as a separate labelled file on the exam, same report flow.
+- Terms: Fall / Spring / Summer / Winter only.
+- No hosting accounts yet: the README has a step-by-step setup guide for Supabase, Resend and Vercel. Local development needs none of them.
