@@ -39,4 +39,4 @@ out/
 yarn-debug.log*
 yarn-error.log*
 src/generated/
-storage/
+/storage/
